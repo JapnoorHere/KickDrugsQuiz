@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<style>
+
+*{
+  font-family: Arial, sans-serif;
+
+}
+
+  .container{
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    height: 70vh;
+    max-width: 100;
+    margin : 0 auto;
+  }
+  .score-card{
+    background-color: #007bff;
+    height: 150px;
+    width: 150px;
+    color: white;
+    border-radius: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+</style>
+
+<body>
+  <div class="container">
+    <h1>You scored</h1>
+    <div class="score-card">
+        <span id="score"><%= score %></span> / <span id="total"><%= total  %></span>
+    </div>
+  </div>
+</body>
+
+</html>
