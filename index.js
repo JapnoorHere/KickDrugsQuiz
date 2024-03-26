@@ -4,15 +4,12 @@ const fs = require('fs');
 const Excel = require('exceljs');
 const path = require('path');
 const { User, Quiz } = require('./models/quiz');
+const session = require('express-session');
 
 
 const app = express();
 const port = 4000;
 const mongoose = require('mongoose');
-
-var userName = "";
-var userEmail = "";
-var userPhone = "";
 
 const PORT = 3000;
 
@@ -36,16 +33,27 @@ admin.initializeApp({
 });
 
 
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('views'));
+// app.use(express.static('images'));
+
 
 app.set('view engine', "ejs");
 app.set('views', path.join(__dirname, 'views'));
 
+app.use(session({
+    secret: 'secret_key',
+    resave: false,
+    saveUninitialized: true
+}));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
+    
+    if (req.session.visitedRoutes) {
+        req.session.visitedRoutes = [];
+    }
+
+    res.sendFile(path.join(__dirname,"views","index.html"));
 })
 
 app.post('/details', (req, res) => {
@@ -61,6 +69,19 @@ app.post('/details', (req, res) => {
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' }); // Destination folder for uploaded files
 
+function checkVisited(req, res, next) {
+    if (req.session.visitedRoutes && req.session.visitedRoutes.includes(req.originalUrl)) {
+        return res.redirect('/');
+    }
+
+    if (!req.session.visitedRoutes) {
+        req.session.visitedRoutes = [];
+    }
+
+    req.session.visitedRoutes.push(req.originalUrl);
+
+    next();
+}
 
 app.get('/quiz', async (req, res) => {
 
@@ -68,7 +89,9 @@ app.get('/quiz', async (req, res) => {
     try {
         const target = new Date().toDateString() + ".xlsx";
         const quiz = await Quiz.findOne({ quiz_name: target }).exec();
-        const fileName = quiz.quiz_name
+        if(quiz){
+        const { quiz_name } = quiz;
+        const fileName = quiz_name;
         const bucket = admin.storage().bucket();
         const file = bucket.file(fileName);
         const destination = './uploads/excel-file.xlsx'; // Local file path to save the downloaded Excel fil
@@ -98,15 +121,20 @@ app.get('/quiz', async (req, res) => {
         });
 
         res.render('quiz', { questions: questions });
-
+        }
+        else{
+            res.redirect('/quizNotFound');
+        }
     }
     catch (err) {
-        console.log(err.message);
+        console.log(err);
     }
 
 })
 
-
+app.get('/quizNotFound',(req,res)=>{
+    res.send('Quiz not found'); 
+})
 
 app.post('/submit', async (req, res) => {
     const { quiz } = req.body;
@@ -146,7 +174,7 @@ app.post('/submit', async (req, res) => {
             quiz_name: target
         }, { $push: { user: user } }, { upsert: true, new: true }
         ).exec();
-        res.render('result',{score : score , total : questions.length});
+        res.render('result', { score: score, total: questions.length });
     }
     catch (err) {
         console.error(err);

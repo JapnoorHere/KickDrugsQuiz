@@ -1,7 +1,9 @@
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-    }
+body{
+    background-color: #f5f5a4;
+}
+* {
+    font-family: Arial, Helvetica, sans-serif;
+}
 
     .quiz-container {
         max-width: 600px;

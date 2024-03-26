@@ -26,8 +26,6 @@ const quizSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-
-
 const Quiz = mongoose.model('Quiz', quizSchema);
 module.exports = {User,Quiz}
 
