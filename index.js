@@ -133,7 +133,7 @@ app.get('/quiz', async (req, res) => {
 })
 
 app.get('/quizNotFound',(req,res)=>{
-    res.send('Quiz not found'); 
+    res.sendFile(path.join(__dirname,"views","quizNotFound.html")); 
 })
 
 app.post('/submit', async (req, res) => {
