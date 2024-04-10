@@ -11,8 +11,6 @@ const app = express();
 const port = 4000;
 const mongoose = require('mongoose');
 
-const PORT = 3000;
-
 mongoose.connect("mongodb://localhost:27017/KickDrugsQuiz");
 const db = mongoose.connection;
 
