@@ -12,16 +12,18 @@
     }
 
     body {
+        overflow: hidden;
         object-fit: contain;
         background-image: url(logo.png);
         background-blend-mode: soft-light;
         background-repeat: no-repeat;
         background-position: center;
-        background-color: #fff2009a;
-        overflow: hidden;
+        background-color: #fff20081;
     }
 
+
     .container {
+        padding: 1rem;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -30,12 +32,12 @@
     }
 
     .card {
-
         background-color: rgba(255, 255, 255, 0.784);
         padding: 2rem;
         border-radius: 10px;
     }
-    .score-card{
+
+    .score-card {
         width: 500px;
         background-color: #dfe4ff;
         padding: 1rem;
@@ -43,7 +45,7 @@
         text-align: center;
     }
 
-    h1{
+    h1 {
         text-align: center;
     }
 
@@ -84,7 +86,7 @@
             <div class="card">
                 <h1>Thank You!</h1>
                 <div class="score-card">
-                    You Scored : 
+                    You Scored :
                     <span id="score">
                         <%= score %>
                     </span> / <span id="total">
@@ -97,4 +99,3 @@
 </body>
 
 </html>
-

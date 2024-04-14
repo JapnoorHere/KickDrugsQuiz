@@ -46,81 +46,105 @@ app.use(session({
 }));
 
 app.get('/', (req, res) => {
-    
+
     if (req.session.visitedRoutes) {
         req.session.visitedRoutes = [];
     }
 
-    res.sendFile(path.join(__dirname,"views","index.html"));
+    res.render("index");
 })
 
+app.get('/exists', (req, res) => {
+    res.render('index');
+});
+
 app.post('/details', (req, res) => {
-    var { name, email, phone } = req.body;
-    console.log("dd", phone);
-    app.locals.name = name;
-    app.locals.email = email;
-    app.locals.phone = phone;
-    res.redirect('/quiz');
-})
+    var { name, email, phone, institution } = req.body;
+    const target = new Date().toDateString() + ".xlsx";
+    Quiz.findOne({ quiz_name: target }).then((quiz) => {
+        if (!quiz) {
+            console.log("Quiz not found");
+            return res.redirect('/quizNotFound');
+        }
+        else {
+
+            const usersInQuiz = quiz.user;
+            console.log('Users in the quiz:', usersInQuiz);
+
+            usersInQuiz.forEach(user => {
+                if (user.email === email) {
+                    return res.redirect('/exists');
+                }
+            });
+            console.log("dd", phone);
+            app.locals.name = name;
+            app.locals.email = email;
+            app.locals.phone = phone;
+            app.locals.institution = institution;
+            res.redirect('/quiz');
+        }
+
+    });
+});
+
 
 
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' }); // Destination folder for uploaded files
 
-function checkVisited(req, res, next) {
-    if (req.session.visitedRoutes && req.session.visitedRoutes.includes(req.originalUrl)) {
-        return res.redirect('/');
-    }
+// function checkVisited(req, res, next) {
+//     if (req.session.visitedRoutes && req.session.visitedRoutes.includes(req.originalUrl)) {
+//         return res.redirect('/');
+//     }
 
-    if (!req.session.visitedRoutes) {
-        req.session.visitedRoutes = [];
-    }
+//     if (!req.session.visitedRoutes) {
+//         req.session.visitedRoutes = [];
+//     }
 
-    req.session.visitedRoutes.push(req.originalUrl);
+//     req.session.visitedRoutes.push(req.originalUrl);
 
-    next();
-}
+//     next();
+// }
 
 app.get('/quiz', async (req, res) => {
 
-    // console.log(readExcelData(path.join(__dirname, "excel.xlsx")));
     try {
         const target = new Date().toDateString() + ".xlsx";
         const quiz = await Quiz.findOne({ quiz_name: target }).exec();
-        if(quiz){
-        const { quiz_name } = quiz;
-        const fileName = quiz_name;
-        const bucket = admin.storage().bucket();
-        const file = bucket.file(fileName);
-        const destination = './uploads/excel-file.xlsx'; // Local file path to save the downloaded Excel fil
+        if (quiz) {
+            const { quiz_name } = quiz;
+            const fileName = quiz_name;
+            const bucket = admin.storage().bucket();
+            const file = bucket.file(fileName);
+            const destination = './uploads/excel-file.xlsx';
 
-        await file.download({ destination });
-        console.log('Excel file downloaded successfully.');
+            await file.download({ destination });
+            console.log('Excel file downloaded successfully.');
 
-        const filePath = "./uploads/excel-file.xlsx";
-        const workbook = new Excel.Workbook();
-        await workbook.xlsx.readFile(filePath);
+            const filePath = './uploads/excel-file.xlsx';
+            const workbook = new Excel.Workbook();
+            await workbook.xlsx.readFile(filePath);
 
-        const worksheet = workbook.getWorksheet(1);
-        const questions = [];
+            const worksheet = workbook.getWorksheet(1);
+            const questions = [];
 
-        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-            const question = row.getCell(1).value;
-            const options = [];
-            let correctAnswer;
+            worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+                const question = row.getCell(1).value;
+                const options = [];
+                let correctAnswer;
 
-            for (let i = 2; i <= 5; i++) {
-                options.push(row.getCell(i).value);
-            }
+                for (let i = 2; i <= 5; i++) {
+                    options.push(row.getCell(i).value);
+                }
 
-            correctAnswer = row.getCell(6).value;
+                correctAnswer = row.getCell(6).value;
 
-            questions.push({ question, options, correctAnswer });
-        });
+                questions.push({ question, options, correctAnswer });
+            });
 
-        res.render('quiz', { questions: questions });
+            res.render('quiz', { questions: questions });
         }
-        else{
+        else {
             res.redirect('/quizNotFound');
         }
     }
@@ -130,8 +154,8 @@ app.get('/quiz', async (req, res) => {
 
 })
 
-app.get('/quizNotFound',(req,res)=>{
-    res.sendFile(path.join(__dirname,"views","quizNotFound.html")); 
+app.get('/quizNotFound', (req, res) => {
+    res.sendFile(path.join(__dirname, "views", "quizNotFound.html"));
 })
 
 app.post('/submit', async (req, res) => {
@@ -166,25 +190,26 @@ app.post('/submit', async (req, res) => {
             }
         }
         console.log(app.locals.phone);
-        const user = new User({ name: app.locals.name, email: app.locals.email, phone: app.locals.phone, score: score });
+        const user = new User({ name: app.locals.name, email: app.locals.email, phone: app.locals.phone, score: score, institution: app.locals.institution });
         const target = new Date().toDateString() + ".xlsx";
         await Quiz.findOneAndUpdate({
             quiz_name: target
         }, { $push: { user: user } }, { upsert: true, new: true }
         ).exec();
-        res.render('result', { score: score, total: questions.length });
+        app.locals.score = score;
+        app.locals.total = questions.length;
+        res.redirect('/result');
     }
     catch (err) {
         console.error(err);
         res.status(500).send('Internal Server Error');
     }
 
-
-
 });
 
-
-
+app.get('/result', (req, res) => {
+    res.render('result', { score: app.locals.score, total: app.locals.total });
+});
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);

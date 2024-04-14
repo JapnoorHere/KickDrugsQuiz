@@ -12,6 +12,9 @@ const userSchema = new mongoose.Schema({
   },
   score : {
     type : String
+  },
+  institution : {
+    type: String
   }
 })
 
