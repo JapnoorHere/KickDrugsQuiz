@@ -5,11 +5,28 @@ const Excel = require('exceljs');
 const path = require('path');
 const { User, Quiz } = require('./models/quiz');
 const session = require('express-session');
-
+const https = require('https');
 
 const app = express();
 const port = 4000;
 const mongoose = require('mongoose');
+
+const { initializeApp } = require("firebase/app");
+const { getStorage, ref, getDownloadURL, uploadBytesResumable } = require("firebase/storage");
+
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDs0jFu6ENRcRR0bCILxpQwl1KKSJ-VFeY",
+    authDomain: "kickdrugsquiz.firebaseapp.com",
+    projectId: "kickdrugsquiz",
+    storageBucket: "kickdrugsquiz.appspot.com",
+    messagingSenderId: "318148898095",
+    appId: "1:318148898095:web:919faa00e0de4b595c05da",
+    measurementId: "G-7VTFER1D89"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+
 
 mongoose.connect("mongodb://localhost:27017/KickDrugsQuiz");
 const db = mongoose.connection;
@@ -22,13 +39,6 @@ db.once('open', () => {
 
 });
 const admin = require("firebase-admin");
-
-const serviceAccount = require("./kickdrugsquiz-firebase-adminsdk-zf1s8-8b0a1d8a4d.json");
-
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: "kickdrugsquiz.appspot.com"
-});
 
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -60,37 +70,14 @@ app.get('/exists', (req, res) => {
 
 app.post('/details', (req, res) => {
     var { name, email, phone, institution } = req.body;
-    const target = new Date().toDateString() + ".xlsx";
-    Quiz.findOne({ quiz_name: target }).then((quiz) => {
-        if (!quiz) {
-            console.log("Quiz not found");
-            return res.redirect('/quizNotFound');
-        }
-        else {
+    console.log("dd", phone);
+    req.session.name = name;
+    req.session.email = email;
+    req.session.phone = phone;
+    req.session.institution = institution;
+    res.redirect('/quiz');
 
-            const usersInQuiz = quiz.user;
-            console.log('Users in the quiz:', usersInQuiz);
-
-            usersInQuiz.forEach(user => {
-                if (user.email === email) {
-                    return res.redirect('/exists');
-                }
-            });
-            console.log("dd", phone);
-            app.locals.name = name;
-            app.locals.email = email;
-            app.locals.phone = phone;
-            app.locals.institution = institution;
-            res.redirect('/quiz');
-        }
-
-    });
 });
-
-
-
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); // Destination folder for uploaded files
 
 // function checkVisited(req, res, next) {
 //     if (req.session.visitedRoutes && req.session.visitedRoutes.includes(req.originalUrl)) {
@@ -114,13 +101,30 @@ app.get('/quiz', async (req, res) => {
         if (quiz) {
             const { quiz_name } = quiz;
             const fileName = quiz_name;
-            const bucket = admin.storage().bucket();
-            const file = bucket.file(fileName);
-            const destination = './uploads/excel-file.xlsx';
+            // const bucket = admin.storage().bucket();
+            // const file = bucket.file(fileName);
 
-            await file.download({ destination });
-            console.log('Excel file downloaded successfully.');
 
+            // const destination = './uploads/excel-file.xlsx';
+
+            // await file.download({ destination });
+            
+            const storage = getStorage(firebaseApp);
+            
+            const fileRef = ref(storage, '/' + fileName);
+            
+            getDownloadURL(fileRef)
+            .then((url) => {
+                const file = fs.createWriteStream("./uploads/excel-file.xlsx");
+                
+                https.get(url, function (response) {
+                    response.pipe(file);
+                    console.log('Excel file downloaded successfully.');
+                    });
+                })
+                .catch((error) => {
+                    console.error(`Failed to download file: ${error}`);
+            });
             const filePath = './uploads/excel-file.xlsx';
             const workbook = new Excel.Workbook();
             await workbook.xlsx.readFile(filePath);
@@ -189,15 +193,15 @@ app.post('/submit', async (req, res) => {
                 }
             }
         }
-        console.log(app.locals.phone);
-        const user = new User({ name: app.locals.name, email: app.locals.email, phone: app.locals.phone, score: score, institution: app.locals.institution });
+        console.log(req.session.phone);
+        const user = new User({ name: req.session.name, email: req.session.email, phone: req.session.phone, score: score, institution: req.session.institution });
         const target = new Date().toDateString() + ".xlsx";
         await Quiz.findOneAndUpdate({
             quiz_name: target
         }, { $push: { user: user } }, { upsert: true, new: true }
         ).exec();
-        app.locals.score = score;
-        app.locals.total = questions.length;
+        req.session.score = score;
+        req.session.total = questions.length;
         res.redirect('/result');
     }
     catch (err) {
@@ -208,7 +212,7 @@ app.post('/submit', async (req, res) => {
 });
 
 app.get('/result', (req, res) => {
-    res.render('result', { score: app.locals.score, total: app.locals.total });
+    res.render('result', { score: req.session.score, total: req.session.total });
 });
 
 app.listen(port, () => {
