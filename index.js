@@ -151,7 +151,7 @@ app.post('/submit', async (req, res) => {
         }
 
         const user = new User({ name: req.session.name, email: req.session.email, phone: req.session.phone, score, institution: req.session.institution });
-        const target = moment().tz('UTC').format('ddd MMM DD YYYY') + ".xlsx";
+        const target = moment().tz('Asia/Kolkata').format('ddd MMM DD YYYY') + ".xlsx";
         console.log(target);
         await Quiz.findOneAndUpdate(
             { quiz_name: target },
