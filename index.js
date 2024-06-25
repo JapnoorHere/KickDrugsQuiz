@@ -8,7 +8,7 @@ const { User, Quiz } = require('./models/quiz');
 const session = require('express-session');
 const https = require('https');
 const mongoose = require('mongoose');
-const moment = require('moment');
+const moment = require('moment-timezone');
 
 const { initializeApp } = require("firebase/app");
 const { getStorage, ref, getDownloadURL } = require("firebase/storage");
@@ -151,7 +151,7 @@ app.post('/submit', async (req, res) => {
         }
 
         const user = new User({ name: req.session.name, email: req.session.email, phone: req.session.phone, score, institution: req.session.institution });
-        const target = moment().format('ddd MMM DD YYYY') + ".xlsx";
+        const target = moment().tz('UTC').format('ddd MMM DD YYYY') + ".xlsx";
         console.log(target);
         await Quiz.findOneAndUpdate(
             { quiz_name: target },
