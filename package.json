@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
     "ejs": "^3.1.9",
+    "env": "^0.0.2",
     "excel4node": "^1.8.2",
     "exceljs": "^4.4.0",
     "express": "^4.19.1",

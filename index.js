@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -6,9 +7,8 @@ const path = require('path');
 const { User, Quiz } = require('./models/quiz');
 const session = require('express-session');
 const https = require('https');
-
 const app = express();
-const port = 4000;
+const port = process.env.PORT || 4000;
 const mongoose = require('mongoose');
 
 const { initializeApp } = require("firebase/app");
@@ -16,19 +16,19 @@ const { getStorage, ref, getDownloadURL, uploadBytesResumable } = require("fireb
 
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDs0jFu6ENRcRR0bCILxpQwl1KKSJ-VFeY",
-    authDomain: "kickdrugsquiz.firebaseapp.com",
-    projectId: "kickdrugsquiz",
-    storageBucket: "kickdrugsquiz.appspot.com",
-    messagingSenderId: "318148898095",
-    appId: "1:318148898095:web:919faa00e0de4b595c05da",
-    measurementId: "G-7VTFER1D89"
+    apiKey: process.env.FB_API_KEY,
+    authDomain: process.env.FB_AUTH_DOMAIN,
+    projectId: process.env.FB_PROJECT_ID,
+    storageBucket: process.env.FB_STORAGE_BUCKET,
+    messagingSenderId: process.env.FB_MESSAGING_SENDER_ID,
+    appId: process.env.FB_APP_ID,
+    measurementId: process.env.FB_MEASUREMENT_ID
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
 
 
-mongoose.connect("mongodb://localhost:27017/KickDrugsQuiz");
+mongoose.connect(process.env.DB_URL);
 const db = mongoose.connection;
 
 db.on('error', (error) => {
@@ -38,7 +38,6 @@ db.once('open', () => {
     console.log("Connected to database");
 
 });
-const admin = require("firebase-admin");
 
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -54,6 +53,8 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
+
+
 
 app.get('/', (req, res) => {
 
@@ -108,23 +109,23 @@ app.get('/quiz', async (req, res) => {
             // const destination = './uploads/excel-file.xlsx';
 
             // await file.download({ destination });
-            
+
             const storage = getStorage(firebaseApp);
-            
+
             const fileRef = ref(storage, '/' + fileName);
-            
+
             getDownloadURL(fileRef)
-            .then((url) => {
-                const file = fs.createWriteStream("./uploads/excel-file.xlsx");
-                
-                https.get(url, function (response) {
-                    response.pipe(file);
-                    console.log('Excel file downloaded successfully.');
+                .then((url) => {
+                    const file = fs.createWriteStream("./uploads/excel-file.xlsx");
+
+                    https.get(url, function (response) {
+                        response.pipe(file);
+                        console.log('Excel file downloaded successfully.');
                     });
                 })
                 .catch((error) => {
                     console.error(`Failed to download file: ${error}`);
-            });
+                });
             const filePath = './uploads/excel-file.xlsx';
             const workbook = new Excel.Workbook();
             await workbook.xlsx.readFile(filePath);
