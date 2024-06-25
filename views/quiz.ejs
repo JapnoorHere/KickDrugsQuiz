@@ -25,7 +25,7 @@
                         <select name="quiz[]">
                             <option value="" disabled selected>Select an option</option>
                             <% question.options.forEach((option, optionIndex)=> { %>
-                                <option value="<%= option %>">
+                                <option value="<%= optionIndex %>">
                                     <%= option %>
                                 </option>
                                 <% }); %>

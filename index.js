@@ -122,6 +122,7 @@ app.get('/quizNotFound', (req, res) => {
 
 app.post('/submit', async (req, res) => {
     const { quiz } = req.body;
+    console.log(quiz);
     try {
         const filePath = "./uploads/excel-file.xlsx";
         const workbook = new Excel.Workbook();
@@ -141,7 +142,8 @@ app.post('/submit', async (req, res) => {
         let score = 0;
         if (quiz) {
             for (let i = 0; i < questions.length; i++) {
-                if (quiz[i] === questions[i].correctAnswer) {
+                console.log("question = " + questions[i].question + "i = " + parseInt(quiz[i])+1 , " correct = " , questions[i].correctAnswer);
+                if (parseInt(quiz[i])+1 === questions[i].correctAnswer) {
                     score++;
                 }
             }
