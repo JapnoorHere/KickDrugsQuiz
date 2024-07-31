@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema({
 })
 
 const quizSchema = new mongoose.Schema({
+  _id : {
+    type : String
+  },
   quiz_name: {
     type : String
   },

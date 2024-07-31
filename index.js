@@ -1,17 +1,14 @@
 require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
 const fs = require('fs');
 const Excel = require('exceljs');
-const path = require('path');
 const { User, Quiz } = require('./models/quiz');
-const session = require('express-session');
 const https = require('https');
 const mongoose = require('mongoose');
 const moment = require('moment-timezone');
-
 const { initializeApp } = require("firebase/app");
 const { getStorage, ref, getDownloadURL } = require("firebase/storage");
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -38,42 +35,17 @@ db.once('open', () => {
     console.log("Connected to database");
 });
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static('views'));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json())
+app.use(cors());
 
-app.set('view engine', "ejs");
-app.set('views', path.join(__dirname, 'views'));
 
-app.use(session({
-    secret: 'secret_key',
-    resave: false,
-    saveUninitialized: true
-}));
 
-app.get('/', (req, res) => {
-    if (req.session.visitedRoutes) {
-        req.session.visitedRoutes = [];
-    }
-    res.render("index");
-});
-
-app.get('/exists', (req, res) => {
-    res.render('index');
-});
-
-app.post('/details', (req, res) => {
-    const { name, email, phone, institution } = req.body;
-    req.session.name = name;
-    req.session.email = email;
-    req.session.phone = phone;
-    req.session.institution = institution;
-    res.redirect('/quiz');
-});
-
-app.get('/quiz', async (req, res) => {
+app.get('/quiz/:id', async (req, res) => {
+    const id = req.params.id;
     try {
         const target = new Date().toDateString() + ".xlsx";
-        const quiz = await Quiz.findOne({ quiz_name: target }).exec();
+        const quiz = await Quiz.findOne({_id : id}).exec();
         if (quiz) {
             const { quiz_name } = quiz;
             const storage = getStorage(firebaseApp);
@@ -100,7 +72,7 @@ app.get('/quiz', async (req, res) => {
                                 const correctAnswer = row.getCell(6).value;
                                 questions.push({ question, options, correctAnswer });
                             });
-                            res.render('quiz', { questions });
+                            res.json({ questions });
                         });
                     });
                 })
@@ -109,7 +81,7 @@ app.get('/quiz', async (req, res) => {
                     res.status(500).send('Internal Server Error');
                 });
         } else {
-            res.redirect('/quizNotFound');
+            res.json('quizNotFound');
         }
     } catch (err) {
         console.error(err);
@@ -117,13 +89,10 @@ app.get('/quiz', async (req, res) => {
     }
 });
 
-app.get('/quizNotFound', (req, res) => {
-    res.sendFile(path.join(__dirname, "views", "quizNotFound.html"));
-});
 
-app.post('/submit', async (req, res) => {
-    const { quiz } = req.body;
-    console.log(quiz);
+app.post('/quiz', async (req, res) => {
+    const { quiz,userData } = req.body;
+    console.log(quiz,userData);
     try {
         const filePath = "./uploads/excel-file.xlsx";
         const workbook = new Excel.Workbook();
@@ -143,33 +112,28 @@ app.post('/submit', async (req, res) => {
         let score = 0;
         if (quiz) {
             for (let i = 0; i < questions.length; i++) {
-                console.log("question = " + questions[i].question + "i = " + parseInt(quiz[i])+1 , " correct = " , questions[i].correctAnswer);
-                if (parseInt(quiz[i])+1 === questions[i].correctAnswer) {
+                console.log(parseInt(quiz[questions[i].question]) + 1);
+                if (parseInt(quiz[questions[i].question])+1 === questions[i].correctAnswer) {
                     score++;
                 }
             }
         }
 
-        const user = new User({ name: req.session.name, email: req.session.email, phone: req.session.phone, score, institution: req.session.institution });
+        const user = new User({ name: userData.name, email: userData.email, phone: userData.phone, score, institution: userData.institution });
         const target = moment().tz('Asia/Kolkata').format('ddd MMM DD YYYY') + ".xlsx";
         console.log(target);
-        await Quiz.findOneAndUpdate(
+        Quiz.findOneAndUpdate(
             { quiz_name: target },
             { $push: { user } },
             { upsert: true, new: true }
-        ).exec();
+        ).exec().then(()=>{
+            res.json({message : 'done',score:score});
+        })
 
-        req.session.score = score;
-        req.session.total = questions.length;
-        res.redirect('/result');
     } catch (err) {
         console.error(err);
         res.status(500).send('Internal Server Error');
     }
-});
-
-app.get('/result', (req, res) => {
-    res.render('result', { score: req.session.score, total: req.session.total });
 });
 
 app.listen(port, () => {
