@@ -16,15 +16,6 @@ const Quiz = () => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
 
-  useEffect(() => {
-    if (!form) {
-      navigate('/');
-    }
-  }, [form,navigate]);
-
-  if (!form) {
-    return null; 
-  }
 
   useEffect(() => {
 
@@ -37,6 +28,17 @@ const Quiz = () => {
       setQuestions(res.data.questions);
     })
   }, []);
+
+  
+  useEffect(() => {
+    if (!form) {
+      navigate('/');
+    }
+  }, [form,navigate]);
+
+  if (!form) {
+    return null; 
+  }
 
   const handleSelect = (event) => {
     setAnswers({
