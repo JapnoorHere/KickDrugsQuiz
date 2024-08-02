@@ -15,7 +15,6 @@ const Quiz = () => {
   const [answers, setAnswers] = useState({});
 
   useEffect(() => {
-    console.log(`${process.env.REACT_APP_API_KEY}${location.pathname}`);
     axios.get(`${process.env.REACT_APP_API_KEY}${location.pathname}`).then((res) => {
       setLoading(false);
       if (res.data === 'quizNotFound') {
