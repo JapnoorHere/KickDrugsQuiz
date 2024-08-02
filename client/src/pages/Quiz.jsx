@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import moment from 'moment';
 import { BounceLoader } from 'react-spinners';
+// require('dotenv').config();
 
 
 const Quiz = () => {
@@ -16,10 +17,9 @@ const Quiz = () => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
 
-
   useEffect(() => {
-
-    axios.get(`http://localhost:4000${location.pathname}`).then((res) => {
+    console.log(`${process.env.REACT_APP_API_KEY}${location.pathname}`);
+    axios.get(`${process.env.REACT_APP_API_KEY}${location.pathname}`).then((res) => {
       setLoading(false);
       if (res.data === 'quizNotFound') {
         setQuestions({ message: 'notFound' });
@@ -51,7 +51,7 @@ const Quiz = () => {
   const submitData = (event) => {
     event.preventDefault();
 
-    axios.post('http://localhost:4000/quiz', {
+    axios.post(`${process.env.REACT_APP_API_KEY}/quiz`, {
       userData: form,
       quiz: answers
     }).then((res) => {
