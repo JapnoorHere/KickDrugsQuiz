@@ -5,7 +5,7 @@ const Navbar = () => {
     <nav>
         <div className='gap-4 flex h-[70px] bg-tan-dark items-center px-4'>
             <img src={logo} alt="" className='h-[60px] w-[60px]' />
-            <span className='text-brown-dark font-medium text-2xl'>Kick Drugs Australia</span>
+            <span className='text-brown-dark font-medium text-2xl'>Kick Drugs Quiz</span>
         </div>
     </nav>
   )
