@@ -39,7 +39,7 @@ db.once('open', () => {
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json())
 app.use(cors({
-    origin: "https://kickdrugsquiz.netlify.app"
+    origin: process.env.CORS_ORIGIN
 }));
 
 
