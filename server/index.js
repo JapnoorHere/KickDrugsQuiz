@@ -9,6 +9,9 @@ const moment = require('moment-timezone');
 const { initializeApp } = require("firebase/app");
 const { getStorage, ref, getDownloadURL } = require("firebase/storage");
 const cors = require('cors');
+const { PassThrough } = require('stream');
+const multer = require('multer');
+
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -42,14 +45,10 @@ app.use(cors({
     origin: '*'
 }));
 
-
-
 app.get('/quiz/:id', async (req, res) => {
     const id = req.params.id;
     try {
-        
-        const target = new Date().toDateString() + ".xlsx";
-        const quiz = await Quiz.findOne({_id : id}).exec();
+        const quiz = await Quiz.findOne({ _id: id }).exec();
         if (quiz) {
             const { quiz_name } = quiz;
             const storage = getStorage(firebaseApp);
@@ -57,17 +56,18 @@ app.get('/quiz/:id', async (req, res) => {
 
             getDownloadURL(fileRef)
                 .then((url) => {
-                    const file = fs.createWriteStream("./uploads/excel-file.xlsx");
-                    https.get(url, function (response) {
-                        response.pipe(file);
-                        file.on('finish', async () => {
-                            file.close();
-                            console.log('Excel file downloaded successfully.');
+                    const passThroughStream = new PassThrough();
+                    https.get(url, (response) => {
+                        response.pipe(passThroughStream);
+                    });
+
+                    passThroughStream.on('finish', async () => {
+                        try {
                             const workbook = new Excel.Workbook();
-                            await workbook.xlsx.readFile("./uploads/excel-file.xlsx");
+                            await workbook.xlsx.read(passThroughStream);
                             const worksheet = workbook.getWorksheet(1);
                             const questions = [];
-                            worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+                            worksheet.eachRow({ includeEmpty: false }, (row) => {
                                 const question = row.getCell(1).value;
                                 const options = [];
                                 for (let i = 2; i <= 5; i++) {
@@ -77,7 +77,15 @@ app.get('/quiz/:id', async (req, res) => {
                                 questions.push({ question, options, correctAnswer });
                             });
                             res.json({ questions });
-                        });
+                        } catch (error) {
+                            console.error(`Error reading Excel file: ${error}`);
+                            res.status(500).send('Internal Server Error');
+                        }
+                    });
+
+                    passThroughStream.on('error', (error) => {
+                        console.error(`Stream error: ${error}`);
+                        res.status(500).send('Internal Server Error');
                     });
                 })
                 .catch((error) => {
@@ -92,18 +100,25 @@ app.get('/quiz/:id', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({ storage: storage });
 
+app.post('/quiz', upload.single('file'), async (req, res) => {
+    const { quiz, userData } = req.body;
+    const file = req.file; // This will be available due to multer
 
-app.post('/quiz', async (req, res) => {
-    const { quiz,userData } = req.body;
-    console.log(quiz,userData);
+    if (!file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
     try {
-        const filePath = "./uploads/excel-file.xlsx";
+        // Load the Excel file from the in-memory buffer
         const workbook = new Excel.Workbook();
-        await workbook.xlsx.readFile(filePath);
+        await workbook.xlsx.load(file.buffer); // Load from buffer
         const worksheet = workbook.getWorksheet(1);
         const questions = [];
-        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+
+        worksheet.eachRow({ includeEmpty: false }, function (row) {
             const question = row.getCell(1).value;
             const options = [];
             for (let i = 2; i <= 5; i++) {
@@ -117,7 +132,7 @@ app.post('/quiz', async (req, res) => {
         if (quiz) {
             for (let i = 0; i < questions.length; i++) {
                 console.log(parseInt(quiz[questions[i].question]) + 1);
-                if (parseInt(quiz[questions[i].question])+1 === questions[i].correctAnswer) {
+                if (parseInt(quiz[questions[i].question]) + 1 === questions[i].correctAnswer) {
                     score++;
                 }
             }
@@ -126,19 +141,21 @@ app.post('/quiz', async (req, res) => {
         const user = new User({ name: userData.name, email: userData.email, phone: userData.phone, score, institution: userData.institution });
         const target = moment().tz('Asia/Kolkata').format('ddd MMM DD YYYY') + ".xlsx";
         console.log(target);
-        Quiz.findOneAndUpdate(
+
+        await Quiz.findOneAndUpdate(
             { quiz_name: target },
             { $push: { user } },
             { upsert: true, new: true }
-        ).exec().then(()=>{
-            res.json({message : 'done',score:score});
-        })
+        ).exec();
+
+        res.json({ message: 'done', score: score });
 
     } catch (err) {
         console.error(err);
         res.status(500).send('Internal Server Error');
     }
 });
+
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
