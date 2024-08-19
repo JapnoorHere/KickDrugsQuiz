@@ -44,7 +44,8 @@ const Quiz = () => {
 
   const submitData = (event) => {
     event.preventDefault();
-
+    console.log("hello from client");
+    
     axios.post(`${process.env.REACT_APP_API_KEY}/quiz`, {
       userData: form,
       quiz: answers
