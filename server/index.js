@@ -39,7 +39,7 @@ db.once('open', () => {
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json())
 app.use(cors({
-    origin: process.env.CORS_ORIGIN
+    origin: '*'
 }));
 
 
@@ -47,6 +47,7 @@ app.use(cors({
 app.get('/quiz/:id', async (req, res) => {
     const id = req.params.id;
     try {
+        
         const target = new Date().toDateString() + ".xlsx";
         const quiz = await Quiz.findOne({_id : id}).exec();
         if (quiz) {
